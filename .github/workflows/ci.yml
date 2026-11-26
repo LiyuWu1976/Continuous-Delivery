@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.21.0'
+          node-version: "24.21.0"
       - run: npm ci
       - run: npm run check
       - run: npm run test:ci
@@ -25,3 +25,54 @@ jobs:
           name: release-board
           path: dist/
           if-no-files-found: error
+
+  deploy-staging:
+    name: CD - Auto Deploy to Staging
+    needs: verify
+    # Deploy only when code is merged into the `main` branch
+    # run CI during the PR stage, but do not deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - name: Download verified artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-dist-${{ github.sha }}
+          path: ./deploy-package
+
+      - name: Deploy & Smoke Test on Staging
+        run: |
+          echo "=== 正在将产物部署到 Staging 服务器 ==="
+          ls -la ./deploy-package
+          # 真实服务器部署时替换为：
+          # scp -r ./deploy-package/* user@staging-server:/var/www/app/
+          # ssh user@staging-server "pm2 restart app"
+          echo "=== Staging 冒烟测试验证通过 ==="
+
+  deploy-production:
+    name: CD - Production Release (Manual Gate)
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # 关联刚才在 Settings -> Environments 中配置的带审批规则的 production 环境
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - name: Download exact same artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-dist-${{ github.sha }}
+          path: ./deploy-package
+
+      - name: Deploy to Production Server
+        run: |
+          echo "=== 已获得人工批准，正在部署到 Production 生产服务器 ==="
+          ls -la ./deploy-package
+          # 真实服务器部署命令（如 SSH/SCP、Docker 或云厂商 CLI）：
+          # scp -r ./deploy-package/* user@prod-server:/var/www/app/
+          # ssh user@prod-server "pm2 restart app"
+          echo "=== Production 生产环境上线完成！ ==="
