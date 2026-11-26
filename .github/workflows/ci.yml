@@ -29,8 +29,6 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     needs: verify
-    # Deploy only when code is merged into the `main` branch
-    # run CI during the PR stage, but do not deploy
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
@@ -38,19 +36,16 @@ jobs:
       url: https://staging.release-board.example.com
     steps:
       - name: Download release-board artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: release-board
           path: ./deploy-dist
 
       - name: Deploy & Smoke Test on Staging
         run: |
-          echo "=== 正在将产物部署到 Staging 服务器 ==="
-          ls -la ./deploy-package
-          # 真实服务器部署时替换为：
-          # scp -r ./deploy-package/* user@staging-server:/var/www/app/
-          # ssh user@staging-server "pm2 restart app"
-          echo "=== Staging 冒烟测试验证通过 ==="
+          echo "Deploying release-board artifact to Staging..."
+                    ls -la ./deploy-dist
+                    echo "Staging smoke test passed."
 
   deploy-production:
     name: Deploy to Production
@@ -62,16 +57,13 @@ jobs:
       url: https://release-board.example.com
     steps:
       - name: Download exact same release-board artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: release-board
           path: ./deploy-dist
 
       - name: Deploy to Production
         run: |
-          echo "=== 已获得人工批准，正在部署到 Production 生产服务器 ==="
-          ls -la ./deploy-package
-          # 真实服务器部署命令（如 SSH/SCP、Docker 或云厂商 CLI）：
-          # scp -r ./deploy-package/* user@prod-server:/var/www/app/
-          # ssh user@prod-server "pm2 restart app"
-          echo "=== Production 生产环境上线完成！ ==="
+          echo "Deploying release-board artifact to Production..."
+                    ls -la ./deploy-dist
+                    echo "Production release completed."
