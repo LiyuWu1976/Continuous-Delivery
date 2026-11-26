@@ -27,7 +27,7 @@ jobs:
           if-no-files-found: error
 
   deploy-staging:
-    name: CD - Auto Deploy to Staging
+    name: Deploy to Staging
     needs: verify
     # Deploy only when code is merged into the `main` branch
     # run CI during the PR stage, but do not deploy
@@ -35,13 +35,13 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://staging.example.com
+      url: https://staging.release-board.example.com
     steps:
-      - name: Download verified artifact
-        uses: actions/download-artifact@v4
+      - name: Download release-board artifact
+        uses: actions/download-artifact@v5
         with:
-          name: app-dist-${{ github.sha }}
-          path: ./deploy-package
+          name: release-board
+          path: ./deploy-dist
 
       - name: Deploy & Smoke Test on Staging
         run: |
@@ -53,22 +53,21 @@ jobs:
           echo "=== Staging 冒烟测试验证通过 ==="
 
   deploy-production:
-    name: CD - Production Release (Manual Gate)
+    name: Deploy to Production
     needs: deploy-staging
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    # 关联刚才在 Settings -> Environments 中配置的带审批规则的 production 环境
     environment:
       name: production
-      url: https://example.com
+      url: https://release-board.example.com
     steps:
-      - name: Download exact same artifact
-        uses: actions/download-artifact@v4
+      - name: Download exact same release-board artifact
+        uses: actions/download-artifact@v5
         with:
-          name: app-dist-${{ github.sha }}
-          path: ./deploy-package
+          name: release-board
+          path: ./deploy-dist
 
-      - name: Deploy to Production Server
+      - name: Deploy to Production
         run: |
           echo "=== 已获得人工批准，正在部署到 Production 生产服务器 ==="
           ls -la ./deploy-package
